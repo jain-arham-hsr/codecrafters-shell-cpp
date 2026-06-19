@@ -17,7 +17,10 @@ int main() {
         if (command == "exit")
             break;
 
-        cout << command << ": command not found";
+        if (command.substr(0, 5) == "echo ") {
+            cout << command.substr(5);
+        } else
+            cout << command << ": command not found";
 
         cout << "\n";
     }
