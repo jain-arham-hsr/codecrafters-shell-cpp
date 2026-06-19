@@ -1,26 +1,74 @@
+#include <functional>
 #include <iostream>
+#include <sstream>
 #include <string>
+#include <unordered_map>
 
 using namespace std;
 
+using CommandFunc = function<int(const vector<string> &)>;
+
+vector<string> split_input(const string &input) {
+    vector<string> tokens;
+    string token;
+    istringstream tokenStream(input);
+    while (tokenStream >> token) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}
+
+unordered_map<string, CommandFunc> builtins;
+
+int builtin_exit(const vector<string> &args) {
+    exit(0);
+    return 0;
+}
+
+int builtin_echo(const vector<string> &args) {
+    for (auto arg : args)
+        cout << arg << " ";
+    return 0;
+}
+
+int builtin_type(const vector<string> &args) {
+    if (builtins.count(args[0]))
+        cout << args[0] << " is a shell builtin";
+    else
+        cout << args[0] << ": not found";
+
+    return 0;
+}
+
 int main() {
-    // Flush after every std::cout / std:cerr
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
+
+    builtins = {
+        {"exit", builtin_exit}, {"echo", builtin_echo}, {"type", builtin_type}};
 
     while (true) {
         std::cout << "$ ";
 
-        string command;
-        getline(cin, command);
+        string inp;
 
-        if (command == "exit")
+        if (!getline(cin, inp)) {
             break;
+        }
 
-        if (command.substr(0, 5) == "echo ") {
-            cout << command.substr(5);
-        } else
+        vector<string> tokens = split_input(inp);
+
+        if (tokens.empty())
+            continue;
+
+        string command = tokens[0];
+        vector<string> args(tokens.begin() + 1, tokens.end());
+
+        if (builtins.find(command) != builtins.end()) {
+            builtins[command](args);
+        } else {
             cout << command << ": command not found";
+        }
 
         cout << "\n";
     }
