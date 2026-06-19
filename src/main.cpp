@@ -10,7 +10,7 @@ int main() {
 
     // TODO: Uncomment the code below to pass the first stage
     while (true) {
-        std::cout << "$ ";
+        std::cout << "\n" << "$ ";
 
         string command;
         getline(cin, command);
