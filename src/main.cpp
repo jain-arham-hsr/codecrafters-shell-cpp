@@ -1,7 +1,9 @@
+#include <cstdlib>
 #include <functional>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <unistd.h>
 #include <unordered_map>
 
 using namespace std;
@@ -32,11 +34,23 @@ int builtin_echo(const vector<string> &args) {
 }
 
 int builtin_type(const vector<string> &args) {
-    if (builtins.count(args[0]))
+    if (builtins.count(args[0])) {
         cout << args[0] << " is a shell builtin";
-    else
-        cout << args[0] << ": not found";
+        return 0;
+    }
 
+    string path_env = getenv("PATH") ? getenv("PATH") : "";
+    istringstream pathStream(path_env);
+    string dir;
+    while (getline(pathStream, dir, ':')) {
+        string full_path = dir + "/" + args[0];
+        if (access(full_path.c_str(), X_OK) == 0) {
+            cout << args[0] << " is " << full_path;
+            return 0;
+        }
+    }
+
+    cout << args[0] << ": not found";
     return 0;
 }
 
