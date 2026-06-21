@@ -180,15 +180,15 @@ int builtin_cd(const vector<string> &args) {
     return 0;
 }
 
+int builtin_jobs(const vector<string> &args) { return 0; }
+
 int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
 
-    builtins = {{"exit", builtin_exit},
-                {"echo", builtin_echo},
-                {"type", builtin_type},
-                {"pwd", builtin_pwd},
-                {"cd", builtin_cd}};
+    builtins = {{"exit", builtin_exit}, {"echo", builtin_echo},
+                {"type", builtin_type}, {"pwd", builtin_pwd},
+                {"cd", builtin_cd},     {"jobs", builtin_jobs}};
 
     while (true) {
         std::cout << "$ ";
