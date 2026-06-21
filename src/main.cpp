@@ -240,8 +240,11 @@ int builtin_exit(const vector<string> &args) {
 }
 
 int builtin_echo(const vector<string> &args) {
-    for (auto arg : args)
-        cout << arg << " ";
+    for (size_t i = 0; i < args.size(); i++) {
+        if (i > 0)
+            cout << " ";
+        cout << args[i];
+    }
     cout << "\n";
     return 0;
 }
