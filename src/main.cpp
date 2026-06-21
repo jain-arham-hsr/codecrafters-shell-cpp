@@ -246,7 +246,7 @@ int main() {
                     _exit(127);
                 } else if (pid > 0) {
                     if (background) {
-                        cout << "[" << next_job_id++ << "] " << pid;
+                        cout << "[" << next_job_id++ << "] " << pid << "\n";
                     } else {
                         int status;
                         waitpid(pid, &status, 0);
