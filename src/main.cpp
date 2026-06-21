@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <fcntl.h>
 #include <functional>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -16,6 +17,13 @@ struct Redirects {
     bool append[3] = {false, false, false};
     bool set[3] = {false, false, false};
     int saved[3] = {-1, -1, -1};
+};
+
+struct Job {
+    int id;
+    pid_t pid;
+    string command;
+    string status;
 };
 
 Redirects parse_redirections(vector<string> &tokens) {
@@ -79,6 +87,8 @@ void restore_redirections(Redirects &r) {
 }
 
 using CommandFunc = function<int(const vector<string> &)>;
+
+vector<Job> jobs;
 
 vector<string> split_input(const string &input) {
     vector<string> tokens;
@@ -180,7 +190,15 @@ int builtin_cd(const vector<string> &args) {
     return 0;
 }
 
-int builtin_jobs(const vector<string> &args) { return 0; }
+int builtin_jobs(const vector<string> &args) {
+    for (size_t i = 0; i < jobs.size(); i++) {
+        Job &j = jobs[i];
+        string marker = (i == jobs.size() - 1) ? "+" : " ";
+        cout << "[" << j.id << "]" << marker << "  " << left << setw(24)
+             << j.status << j.command << "\n";
+    }
+    return 0;
+}
 
 int next_job_id = 1;
 
@@ -194,7 +212,11 @@ int main() {
 
     while (true) {
 
-        while (waitpid(-1, nullptr, WNOHANG) > 0) {
+        pid_t finished;
+        while ((finished = waitpid(-1, nullptr, WNOHANG)) > 0) {
+            for (auto &j : jobs)
+                if (j.pid == finished)
+                    j.status = "Done";
         }
 
         std::cout << "$ ";
@@ -225,6 +247,12 @@ int main() {
         string command = tokens[0];
         vector<string> args(tokens.begin() + 1, tokens.end());
 
+        string cmd_str = command;
+        for (auto &a : args)
+            cmd_str += " " + a;
+        if (background)
+            cmd_str += " &";
+
         apply_redirections(redirs);
 
         if (builtins.find(command) != builtins.end()) {
@@ -246,7 +274,9 @@ int main() {
                     _exit(127);
                 } else if (pid > 0) {
                     if (background) {
-                        cout << "[" << next_job_id++ << "] " << pid << "\n";
+                        int job_id = next_job_id++;
+                        jobs.push_back({job_id, pid, cmd_str, "Running"});
+                        cout << "[" << job_id << "] " << pid << "\n";
                     } else {
                         int status;
                         waitpid(pid, &status, 0);
