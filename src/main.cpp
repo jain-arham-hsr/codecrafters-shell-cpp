@@ -286,7 +286,7 @@ int builtin_cd(const vector<string> &args) {
 }
 
 int builtin_jobs(const vector<string> &args) {
-    check_for_exits(); // just update statuses, don't print yet
+    check_for_exits();
 
     for (size_t i = 0; i < jobs.size(); i++) {
         Job &j = jobs[i];
