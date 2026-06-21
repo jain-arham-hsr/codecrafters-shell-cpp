@@ -86,6 +86,30 @@ void restore_redirections(Redirects &r) {
     }
 }
 
+void reap_jobs() {
+    for (auto &j : jobs) {
+        if (j.status == "Running") {
+            int status;
+            if (waitpid(j.pid, &status, WNOHANG) > 0 && WIFEXITED(status))
+                j.status = "Done";
+        }
+    }
+
+    for (size_t i = 0; i < jobs.size(); i++) {
+        if (jobs[i].status == "Done") {
+            string marker = (i == jobs.size() - 1)   ? "+"
+                            : (i == jobs.size() - 2) ? "-"
+                                                     : " ";
+            cout << "[" << jobs[i].id << "]" << marker << " " << left
+                 << setw(24) << "Done" << jobs[i].command << "\n";
+        }
+    }
+
+    jobs.erase(remove_if(jobs.begin(), jobs.end(),
+                         [](const Job &j) { return j.status == "Done"; }),
+               jobs.end());
+}
+
 using CommandFunc = function<int(const vector<string> &)>;
 
 vector<Job> jobs;
@@ -191,31 +215,16 @@ int builtin_cd(const vector<string> &args) {
 }
 
 int builtin_jobs(const vector<string> &args) {
-    for (auto &j : jobs) {
-        if (j.status == "Running") {
-            int status;
-            pid_t result = waitpid(j.pid, &status, WNOHANG);
-            if (result > 0 && WIFEXITED(status))
-                j.status = "Done";
-        }
-    }
+    reap_jobs();
 
     for (size_t i = 0; i < jobs.size(); i++) {
         Job &j = jobs[i];
         string marker = (i == jobs.size() - 1)   ? "+"
                         : (i == jobs.size() - 2) ? "-"
                                                  : " ";
-        string cmd = j.command;
-        if (j.status == "Running")
-            cmd += " &";
         cout << "[" << j.id << "]" << marker << " " << left << setw(24)
-             << j.status << cmd << "\n";
+             << j.status << j.command << " &\n";
     }
-
-    jobs.erase(remove_if(jobs.begin(), jobs.end(),
-                         [](const Job &j) { return j.status == "Done"; }),
-               jobs.end());
-
     return 0;
 }
 
@@ -230,6 +239,8 @@ int main() {
                 {"cd", builtin_cd},     {"jobs", builtin_jobs}};
 
     while (true) {
+
+        reap_jobs();
 
         std::cout << "$ ";
 
