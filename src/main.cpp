@@ -26,6 +26,10 @@ struct Job {
     string status;
 };
 
+using CommandFunc = function<int(const vector<string> &)>;
+
+vector<Job> jobs;
+
 Redirects parse_redirections(vector<string> &tokens) {
     Redirects r;
     vector<string> clean;
@@ -109,10 +113,6 @@ void reap_jobs() {
                          [](const Job &j) { return j.status == "Done"; }),
                jobs.end());
 }
-
-using CommandFunc = function<int(const vector<string> &)>;
-
-vector<Job> jobs;
 
 vector<string> split_input(const string &input) {
     vector<string> tokens;
