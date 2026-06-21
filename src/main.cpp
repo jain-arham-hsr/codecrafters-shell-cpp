@@ -191,14 +191,31 @@ int builtin_cd(const vector<string> &args) {
 }
 
 int builtin_jobs(const vector<string> &args) {
+    for (auto &j : jobs) {
+        if (j.status == "Running") {
+            int status;
+            pid_t result = waitpid(j.pid, &status, WNOHANG);
+            if (result > 0 && WIFEXITED(status))
+                j.status = "Done";
+        }
+    }
+
     for (size_t i = 0; i < jobs.size(); i++) {
         Job &j = jobs[i];
         string marker = (i == jobs.size() - 1)   ? "+"
                         : (i == jobs.size() - 2) ? "-"
                                                  : " ";
-        cout << "[" << j.id << "]" << marker << "  " << left << setw(24)
-             << j.status << j.command << "\n";
+        string cmd = j.command;
+        if (j.status == "Running")
+            cmd += " &";
+        cout << "[" << j.id << "]" << marker << " " << left << setw(24)
+             << j.status << cmd << "\n";
     }
+
+    jobs.erase(remove_if(jobs.begin(), jobs.end(),
+                         [](const Job &j) { return j.status == "Done"; }),
+               jobs.end());
+
     return 0;
 }
 
@@ -213,13 +230,6 @@ int main() {
                 {"cd", builtin_cd},     {"jobs", builtin_jobs}};
 
     while (true) {
-
-        pid_t finished;
-        while ((finished = waitpid(-1, nullptr, WNOHANG)) > 0) {
-            for (auto &j : jobs)
-                if (j.pid == finished)
-                    j.status = "Done";
-        }
 
         std::cout << "$ ";
 
@@ -252,8 +262,6 @@ int main() {
         string cmd_str = command;
         for (auto &a : args)
             cmd_str += " " + a;
-        if (background)
-            cmd_str += " &";
 
         apply_redirections(redirs);
 
