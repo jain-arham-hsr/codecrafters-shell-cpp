@@ -87,10 +87,11 @@ int main() {
 
         if (builtins.find(command) != builtins.end()) {
             builtins[command](args);
+            cout << "\n";
         } else {
             string full_path = find_in_path(command);
             if (full_path.empty()) {
-                cout << command << ": command not found";
+                cout << command << ": command not found" << "\n";
             } else {
                 vector<char *> argv;
                 argv.push_back(const_cast<char *>(command.c_str()));
@@ -108,7 +109,5 @@ int main() {
                 }
             }
         }
-
-        cout << "\n";
     }
 }
