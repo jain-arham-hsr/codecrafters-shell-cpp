@@ -1,5 +1,6 @@
 #include <climits>
 #include <cstdlib>
+#include <fcntl.h>
 #include <functional>
 #include <iostream>
 #include <sstream>
@@ -9,6 +10,73 @@
 #include <unordered_map>
 
 using namespace std;
+
+struct Redirects {
+    string file[3];
+    bool append[3] = {false, false, false};
+    bool set[3] = {false, false, false};
+    int saved[3] = {-1, -1, -1};
+};
+
+Redirects parse_redirections(vector<string> &tokens) {
+    Redirects r;
+    vector<string> clean;
+
+    for (size_t i = 0; i < tokens.size(); i++) {
+        string &t = tokens[i];
+        int fd = -1;
+        bool app = false;
+        if (t == ">" || t == "1>")
+            fd = 1;
+        else if (t == ">>" || t == "1>>") {
+            fd = 1;
+            app = true;
+        } else if (t == "2>")
+            fd = 2;
+        else if (t == "2>>") {
+            fd = 2;
+            app = true;
+        }
+
+        if (fd != -1 && i + 1 < tokens.size()) {
+            r.set[fd] = true;
+            r.append[fd] = app;
+            r.file[fd] = tokens[++i];
+        } else {
+            clean.push_back(t);
+        }
+    }
+
+    tokens = clean;
+    return r;
+}
+
+void apply_redirections(Redirects &r) {
+    for (int fd = 1; fd <= 2; fd++) {
+        if (!r.set[fd])
+            continue;
+        int flags = O_WRONLY | O_CREAT | (r.append[fd] ? O_APPEND : O_TRUNC);
+        int file_fd = open(r.file[fd].c_str(), flags, 0644);
+        if (file_fd < 0) {
+            perror(r.file[fd].c_str());
+            continue;
+        }
+        r.saved[fd] = dup(fd);
+        dup2(file_fd, fd);
+        close(file_fd);
+    }
+}
+
+void restore_redirections(Redirects &r) {
+    cout.flush();
+    cerr.flush();
+    for (int fd = 1; fd <= 2; fd++) {
+        if (r.saved[fd] != -1) {
+            dup2(r.saved[fd], fd);
+            close(r.saved[fd]);
+        }
+    }
+}
 
 using CommandFunc = function<int(const vector<string> &)>;
 
@@ -136,8 +204,14 @@ int main() {
         if (tokens.empty())
             continue;
 
+        Redirects redirs = parse_redirections(tokens);
+        if (tokens.empty())
+            continue;
+
         string command = tokens[0];
         vector<string> args(tokens.begin() + 1, tokens.end());
+
+        apply_redirections(redirs);
 
         if (builtins.find(command) != builtins.end()) {
             builtins[command](args);
@@ -162,5 +236,7 @@ int main() {
                 }
             }
         }
+
+        restore_redirections(redirs);
     }
 }
