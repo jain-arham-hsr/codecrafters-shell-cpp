@@ -1,3 +1,4 @@
+#include <climits>
 #include <cstdlib>
 #include <functional>
 #include <iostream>
@@ -61,12 +62,21 @@ int builtin_type(const vector<string> &args) {
     return 0;
 }
 
+int builtin_pwd(const vector<string> &args) {
+    char buf[PATH_MAX];
+    if (getcwd(buf, sizeof(buf)) != nullptr)
+        cout << buf;
+    return 0;
+}
+
 int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
 
-    builtins = {
-        {"exit", builtin_exit}, {"echo", builtin_echo}, {"type", builtin_type}};
+    builtins = {{"exit", builtin_exit},
+                {"echo", builtin_echo},
+                {"type", builtin_type},
+                {"pwd", builtin_pwd}};
 
     while (true) {
         std::cout << "$ ";
