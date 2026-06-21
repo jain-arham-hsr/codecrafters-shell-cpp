@@ -44,12 +44,13 @@ int builtin_exit(const vector<string> &args) {
 int builtin_echo(const vector<string> &args) {
     for (auto arg : args)
         cout << arg << " ";
+    cout << "\n";
     return 0;
 }
 
 int builtin_type(const vector<string> &args) {
     if (builtins.count(args[0])) {
-        cout << args[0] << " is a shell builtin";
+        cout << args[0] << " is a shell builtin" << "\n";
         return 0;
     }
 
@@ -58,7 +59,7 @@ int builtin_type(const vector<string> &args) {
         cout << args[0] << " is " << full_path;
     else
         cout << args[0] << ": not found";
-
+    cout << "\n";
     return 0;
 }
 
@@ -66,6 +67,13 @@ int builtin_pwd(const vector<string> &args) {
     char buf[PATH_MAX];
     if (getcwd(buf, sizeof(buf)) != nullptr)
         cout << buf;
+    cout << "\n";
+    return 0;
+}
+
+int builtin_cd(const vector<string> &args) {
+    if (chdir(args[0].c_str()) != 0)
+        cout << "cd: " << args[0] << ": No such file or directory" << "\n";
     return 0;
 }
 
@@ -76,7 +84,8 @@ int main() {
     builtins = {{"exit", builtin_exit},
                 {"echo", builtin_echo},
                 {"type", builtin_type},
-                {"pwd", builtin_pwd}};
+                {"pwd", builtin_pwd},
+                {"cd", builtin_cd}};
 
     while (true) {
         std::cout << "$ ";
@@ -97,7 +106,6 @@ int main() {
 
         if (builtins.find(command) != builtins.end()) {
             builtins[command](args);
-            cout << "\n";
         } else {
             string full_path = find_in_path(command);
             if (full_path.empty()) {
