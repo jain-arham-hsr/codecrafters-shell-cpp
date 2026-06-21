@@ -186,18 +186,15 @@ vector<vector<string>> split_pipeline(vector<string> &tokens) {
 
 void run_pipeline(vector<vector<string>> &segments) {
     int num = segments.size();
-    vector<int[2]> pipes(num - 1);
+    vector<array<int, 2>> pipes(num - 1);
 
     for (int i = 0; i < num - 1; i++)
-        pipe(pipes[i]);
+        pipe(pipes[i].data());
 
     for (int i = 0; i < num; i++) {
         vector<string> &seg = segments[i];
-        string full_path = find_in_path(seg[0]);
-        if (full_path.empty()) {
-            cout << seg[0] << ": command not found\n";
-            continue;
-        }
+        string cmd = seg[0];
+        vector<string> args(seg.begin() + 1, seg.end());
 
         pid_t pid = fork();
         if (pid == 0) {
@@ -208,6 +205,17 @@ void run_pipeline(vector<vector<string>> &segments) {
             for (int j = 0; j < num - 1; j++) {
                 close(pipes[j][0]);
                 close(pipes[j][1]);
+            }
+
+            if (builtins.count(cmd)) {
+                builtins[cmd](args);
+                _exit(0);
+            }
+
+            string full_path = find_in_path(cmd);
+            if (full_path.empty()) {
+                cerr << cmd << ": command not found\n";
+                _exit(127);
             }
             vector<char *> argv;
             for (auto &a : seg)
