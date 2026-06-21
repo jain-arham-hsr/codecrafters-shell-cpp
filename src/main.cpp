@@ -15,10 +15,38 @@ using CommandFunc = function<int(const vector<string> &)>;
 vector<string> split_input(const string &input) {
     vector<string> tokens;
     string token;
-    istringstream tokenStream(input);
-    while (tokenStream >> token) {
-        tokens.push_back(token);
+    char quote = 0;
+    bool in_token = false;
+
+    for (size_t i = 0; i < input.size(); i++) {
+        char c = input[i];
+        bool escape = c == '\\' && i + 1 < input.size() &&
+                      (quote == 0 ||
+                       (quote == '"' &&
+                        string("\\$\"\n").find(input[i + 1]) != string::npos));
+
+        if (!quote && isspace((unsigned char)c)) {
+            if (in_token) {
+                tokens.push_back(token);
+                token.clear();
+                in_token = false;
+            }
+        } else if (!quote && (c == '\'' || c == '"')) {
+            quote = c;
+            in_token = true;
+        } else if (quote && c == quote) {
+            quote = 0;
+        } else if (escape) {
+            token += input[++i];
+            in_token = true;
+        } else {
+            token += c;
+            in_token = true;
+        }
     }
+
+    if (in_token)
+        tokens.push_back(token);
     return tokens;
 }
 
