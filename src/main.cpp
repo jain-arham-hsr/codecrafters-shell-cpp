@@ -90,7 +90,7 @@ void restore_redirections(Redirects &r) {
     }
 }
 
-void reap_jobs() {
+void check_for_exits() {
     for (auto &j : jobs) {
         if (j.status == "Running") {
             int status;
@@ -98,6 +98,10 @@ void reap_jobs() {
                 j.status = "Done";
         }
     }
+}
+
+void reap_jobs() {
+    check_for_exits();
 
     for (size_t i = 0; i < jobs.size(); i++) {
         if (jobs[i].status == "Done") {
@@ -215,16 +219,21 @@ int builtin_cd(const vector<string> &args) {
 }
 
 int builtin_jobs(const vector<string> &args) {
-    reap_jobs();
+    check_for_exits(); // just update statuses, don't print yet
 
     for (size_t i = 0; i < jobs.size(); i++) {
         Job &j = jobs[i];
         string marker = (i == jobs.size() - 1)   ? "+"
                         : (i == jobs.size() - 2) ? "-"
                                                  : " ";
+        string cmd = j.status == "Running" ? j.command + " &" : j.command;
         cout << "[" << j.id << "]" << marker << " " << left << setw(24)
-             << j.status << j.command << " &\n";
+             << j.status << cmd << "\n";
     }
+
+    jobs.erase(remove_if(jobs.begin(), jobs.end(),
+                         [](const Job &j) { return j.status == "Done"; }),
+               jobs.end());
     return 0;
 }
 
