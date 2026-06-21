@@ -193,7 +193,9 @@ int builtin_cd(const vector<string> &args) {
 int builtin_jobs(const vector<string> &args) {
     for (size_t i = 0; i < jobs.size(); i++) {
         Job &j = jobs[i];
-        string marker = (i == jobs.size() - 1) ? "+" : " ";
+        string marker = (i == jobs.size() - 1)   ? "+"
+                        : (i == jobs.size() - 2) ? "-"
+                                                 : " ";
         cout << "[" << j.id << "]" << marker << "  " << left << setw(24)
              << j.status << j.command << "\n";
     }
