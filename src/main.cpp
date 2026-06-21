@@ -304,7 +304,7 @@ int main() {
                     _exit(127);
                 } else if (pid > 0) {
                     if (background) {
-                        int job_id = next_job_id++;
+                        int job_id = jobs.empty() ? 1 : jobs.back().id + 1;
                         jobs.push_back({job_id, pid, cmd_str, "Running"});
                         cout << "[" << job_id << "] " << pid << "\n";
                     } else {
