@@ -182,6 +182,8 @@ int builtin_cd(const vector<string> &args) {
 
 int builtin_jobs(const vector<string> &args) { return 0; }
 
+int next_job_id = 1;
+
 int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
@@ -191,6 +193,10 @@ int main() {
                 {"cd", builtin_cd},     {"jobs", builtin_jobs}};
 
     while (true) {
+
+        while (waitpid(-1, nullptr, WNOHANG) > 0) {
+        }
+
         std::cout << "$ ";
 
         string inp;
@@ -205,6 +211,14 @@ int main() {
             continue;
 
         Redirects redirs = parse_redirections(tokens);
+        if (tokens.empty())
+            continue;
+
+        bool background = false;
+        if (tokens.back() == "&") {
+            background = true;
+            tokens.pop_back();
+        }
         if (tokens.empty())
             continue;
 
@@ -231,8 +245,12 @@ int main() {
                     execv(full_path.c_str(), argv.data());
                     _exit(127);
                 } else if (pid > 0) {
-                    int status;
-                    waitpid(pid, &status, 0);
+                    if (background) {
+                        cout << "[" << next_job_id++ << "] " << pid;
+                    } else {
+                        int status;
+                        waitpid(pid, &status, 0);
+                    }
                 }
             }
         }
