@@ -27,6 +27,7 @@ struct Job {
 };
 
 using CommandFunc = function<int(const vector<string> &)>;
+unordered_map<string, CommandFunc> builtins;
 
 vector<Job> jobs;
 
@@ -168,7 +169,62 @@ string find_in_path(const string &command) {
     return "";
 }
 
-unordered_map<string, CommandFunc> builtins;
+vector<vector<string>> split_pipeline(vector<string> &tokens) {
+    vector<vector<string>> segments;
+    vector<string> current;
+    for (auto &t : tokens) {
+        if (t == "|") {
+            segments.push_back(current);
+            current.clear();
+        } else {
+            current.push_back(t);
+        }
+    }
+    segments.push_back(current);
+    return segments;
+}
+
+void run_pipeline(vector<vector<string>> &segments) {
+    int num = segments.size();
+    vector<int[2]> pipes(num - 1);
+
+    for (int i = 0; i < num - 1; i++)
+        pipe(pipes[i]);
+
+    for (int i = 0; i < num; i++) {
+        vector<string> &seg = segments[i];
+        string full_path = find_in_path(seg[0]);
+        if (full_path.empty()) {
+            cout << seg[0] << ": command not found\n";
+            continue;
+        }
+
+        pid_t pid = fork();
+        if (pid == 0) {
+            if (i > 0)
+                dup2(pipes[i - 1][0], STDIN_FILENO);
+            if (i < num - 1)
+                dup2(pipes[i][1], STDOUT_FILENO);
+            for (int j = 0; j < num - 1; j++) {
+                close(pipes[j][0]);
+                close(pipes[j][1]);
+            }
+            vector<char *> argv;
+            for (auto &a : seg)
+                argv.push_back(const_cast<char *>(a.c_str()));
+            argv.push_back(nullptr);
+            execv(full_path.c_str(), argv.data());
+            _exit(127);
+        }
+    }
+
+    for (int i = 0; i < num - 1; i++) {
+        close(pipes[i][0]);
+        close(pipes[i][1]);
+    }
+    for (int i = 0; i < num; i++)
+        wait(nullptr);
+}
 
 int builtin_exit(const vector<string> &args) {
     exit(0);
@@ -284,6 +340,13 @@ int main() {
             cmd_str += " " + a;
 
         apply_redirections(redirs);
+
+        auto segments = split_pipeline(tokens);
+        if (segments.size() > 1) {
+            run_pipeline(segments);
+            restore_redirections(redirs);
+            continue;
+        }
 
         if (builtins.find(command) != builtins.end()) {
             builtins[command](args);
