@@ -72,7 +72,14 @@ int builtin_pwd(const vector<string> &args) {
 }
 
 int builtin_cd(const vector<string> &args) {
-    if (chdir(args[0].c_str()) != 0)
+    string path = args[0];
+    if (path == "~") {
+        const char *home = getenv("HOME");
+        if (home)
+            path = home;
+    }
+
+    if (chdir(path.c_str()) != 0)
         cout << "cd: " << args[0] << ": No such file or directory" << "\n";
     return 0;
 }
